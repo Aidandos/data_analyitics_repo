@@ -28,7 +28,7 @@ library(dendextend)
 library(corrgram)
 ```
 
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 # Multiple plot function
 # http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
 # ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
@@ -76,7 +76,7 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 }
 ```
 
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 aic_bic = function(fit){
   # Number of features #
   m = ncol(fit$centers)
@@ -95,7 +95,7 @@ Furthermore, I will plot distributions of variables which will underline my deci
 Afterwards we will also look at some correlations between the continuous variables.
 
 
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 set.seed(20)
 par(mfrow=c(2,2))
 hist(covtype$Elevation, main='Elevation')
@@ -113,7 +113,7 @@ As previously mentioned, there will also be a second data with the Wilderness_Ar
 In both data sets we are excluding the Soil_Type data, as the background knowledge does not seem to imply any important correlation. It also allows us to keep the complexity of the solution relatively low.
 Due to a lack of computing power, we will also not work with the whole data set, as it would take too much time, at least for the 'agnes' clustering.
 
-```{r, echo=FALSE}
+```{r,  message=F, warning=F, echo=FALSE}
 sct = covtype[sample(nrow(covtype), 2000), ]
 sct = na.omit(sct)
 sctn = sct[c('Elevation','Aspect','Slope','Horizontal_Distance_To_Roadways',
@@ -139,44 +139,17 @@ for (colName in names(covtype_wa)) {
 
 There is not much additional information to be gained from the correlation matrix of the continuous variables. The strong correlations are where they are expected.
 
-```{r, echo=FALSE}
+```{r,  message=F, warning=F, echo=FALSE}
 corrgram(ssctn)
 ```
 
 For the further analysis, we need the distance measures between the individual points. They are required by the hierarchical clustering algorithms. I choose the euclidean distance because that allows a better comparison with the kmeans algorithm, which by definition uses the euclidean distance. There will be further analysis where we change the distance measure to the Manhattan distance. Despite that we know that there should be 7 clusters, as there are 7 cover types, we will try to find the approximately best number of clusters from the Akaike and Bayesian Information Criterion.
 
 
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 d <- dist(ssctn, method = "euclidean")
 ```
 
-# ```{r,echo=FALSE}
-# #cat("K", "\t", "AIC", "\t\t", "BIC", "\n")
-# lowest_bic = lowest_aic = 100000000
-# best_k_bic = best_k_aic = 0
-# for (k in 3:100) {
-#   aic_bic_k = aic_bic(kmeans(ssctn[], centers = k, nstart = 20,algorithm = 'Lloyd',iter.max=150))
-#   current_aic = aic_bic_k[1]
-#   current_bic = aic_bic_k[2]
-#   if (current_aic < lowest_aic) {
-#     lowest_aic = current_aic
-#     best_k_aic = k
-#   }
-#   if (current_bic < lowest_bic) {
-#     lowest_bic = current_bic
-#     best_k_bic = k
-#   }
-#   # cat(k, '\t', bic_aic_k[1], '\t', bic_aic_k[2], '\n')
-# }
-# ```
-# 
-# ```{r}
-# cat('Best K according to AIC: ', best_k_aic, '-- AIC: ', lowest_aic, '\n')
-# ```
-# 
-# ```{r}
-# cat('Best K according to BIC: ', best_k_bic, '-- BIC: ', lowest_bic, '\n')
-# ```
 
 With a sample size of n = 10'000 and trying k = 3 to k = 100, the most optimal k according to the AIC appears to be the maximum value defined. For the BIC it appeared to be 51. This difference might originate from the fact that BIC appears to be more punishing for using additional clusters. The values applied above will be for a smaller sample size.
 
@@ -186,7 +159,7 @@ The Elbow Method tries to minimize the intra-cluster variance, also known as the
 The Average Silhouette Method looks at the average silhouette width of the clusters. Intuitively, if there is a high average silhouette width, there is a good clustering, where narrower silhouettes rather suggest clusters that do not generalize well.
 Third is the Gap Statistic Method, which again compares the different intra-cluster variations. It does so in a more intricate way however. In theory, we should be looking to maximize the Gap statistic and as we can see, we should be taking the k=15 or even more, as the trend seems to be rising. However, we choose the k after which the trend seems to slow down drastically, which in our case is at the k=6 point. In the two other methods we can also see that at k=6 there is usually a significant jump followed by a flattening change.
 
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 p1 = fviz_nbclust(ssctn, FUN = hcut,k.max = 15, method = "wss")+ labs(title = "Hclust")
 p2 = fviz_nbclust(ssctn, FUN = kmeans,k.max = 15, method = "wss")+ labs(title = "Kmeans")
 p3 = fviz_nbclust(ssctn, FUN = hcut,k.max = 15, method = "silhouette")+ labs(title = "Hclust")
@@ -197,7 +170,7 @@ multiplot(p1,p2,p3,p4,p5,p6, cols=3)
 ```
 
 There are multiple methods to compute the bottom-up hierarchical clustering. That is why first we need to investigate which method performs best, which turns out to be the "ward" method.
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 m <- c( "average", "single", "complete", "ward")
 names(m) <- c( "average", "single", "complete", "ward")
 
@@ -210,7 +183,7 @@ map_dbl(m, ac)
 ```
 Next we will compare the bottum-up and the top-down approach. We can do see both clusterings in the dendrograms. Additionally we can compare the agglomerative and the divise coefficient of the two algorithms. They indicate how much clustering structure was found. The results suggest that the bottom-up approach has found more clustering structure than the the top-down approach. However, this might not come from their direction of clustering, but the fact that the agglomerative is using the "ward" method. The high values indicate that both algorithms are able to find good clustering structures, as 1 would be the maximum value.
 
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 fit <- hclust(d, method="ward.D2")
 agnes_fit <- agnes(d, method= "ward")
 'Agnes'
@@ -218,7 +191,7 @@ agnes_fit$ac
 agnes_groups = cutree(as.hclust(agnes_fit), k = 6)
 ```
 
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 diana_fit = diana(d)
 'Diana' 
 diana_fit$dc
@@ -227,7 +200,7 @@ diana_groups = cutree(as.hclust(diana_fit), k = 6)
 # pltree(diana_fit, cex = 0.6, hang = -1, main = "Dendrogram of diana")
 ```
 
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 par(mfrow=c(1,2))
 hclust_plot = plot(fit) 
 groups <- cutree(fit, k=9)
@@ -235,13 +208,13 @@ hclust_rect_plot = rect.hclust(fit, k=6, border="red")
 pltree(diana_fit, cex = 0.6, hang = -1, main = "Dendrogram of diana")
 ```
 
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 km_groups = kmeans(ssctn[], centers = 6, nstart = 20,iter.max=80)
 kp_clusters = kproto(covtype_wa[], k = 6, nstart = 20,iter.max=80)
 pam_groups = pam(ssctn,k=6)
 ```
 
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 hclust_fviz = fviz_cluster(list(data = ssctn, cluster = groups),geom = 'point', main = "HClust plot")
 agnes_fviz = fviz_cluster(list(data = ssctn, cluster = agnes_groups),geom = 'point', main = "Agnes plot")
 diana_fviz = fviz_cluster(list(data = ssctn, cluster = diana_groups),geom='point', main = "Diana plot")
@@ -253,18 +226,18 @@ orig_fviz = fviz_cluster(list(data=ssctn, cluster=sct$Cover_Type),geom='point',m
 The next few plots will display the different clusterings acquired by our algorithms. The axes that are being displayed are chosen based on a principal component analysis. One should note the 'Orig Clustering' plot where I show the clustering if we used the clustering by the original Cover_Type values.
 As we can see, the original clusterings do not spread over the two variables with the most variance but they seem to overlap. This makes it very hard for the clustering algorithms to detect these clusters, as they try to minimize the intracluster distance and thus the variance. From a visual perspective, the bottom-up hierarchical approach and kmeans appear to create similar results, as well as kproto and Pam, where Pam is a kmedoid algorithm that chooses data points as cluster centers. The top-down approach captures the cluster in the bottom left quite well, however, this might just be a coincidence. Additionally it also appears to be a coincidence that the methods used to choose the amount of clusters seem to line up with the number of different cover types at k=6 / k=7. One could have assumed that the clustering structure that was detected was indeed connected to the Cover_Type.
 The plot by kproto might suggest that the addition of the Wilderness_Area variable indeed increased the intrinsic clustering structure related to the Cover_Type.
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 multiplot(agnes_fviz,diana_fviz,km_fviz,kp_fviz,pam_fviz,orig_fviz, cols=2)
 ```
 
 Since we were not able to find a clustering that would indicate a natural clustering of Cover_Type, we need to approach it differently.
 Let us therefore look at a different distance measure, namely the Manhattan distance.
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 d <- dist(ssctn, method = "manhattan")
 ```
 
 This time there appears to be no decisive best number of clusters in the range of 1 - 10, so we are encountering a similar situation as we did before with the AIC and BIC. As before, there appears to be a spike at k=2 for the Silhouette Method. Let us investigate k=2 a bit more.
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 p1_man = fviz_nbclust(ssctn, FUN = hcut, method = "wss",diss=d)+ labs(title = "Hclust")
 p2_man = fviz_nbclust(ssctn, FUN = kmeans, method = "wss",diss=d)+ labs(title = "Kmeans")
 p3_man = fviz_nbclust(ssctn, FUN = hcut, method = "silhouette",diss=d)+ labs(title = "Hclust")
@@ -275,7 +248,7 @@ multiplot(p1_man,p2_man,p3_man,p4_man,p5_man,p6_man, cols=3)
 ```
 
 As one can see, k=2 with the Manhattan distance achieves better coefficients for the hierarchical clustering than k=6 with the Euclidean distance.
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 fit <- hclust(d, method="ward.D2")
 groups <- cutree(fit, k=2)
 agnes_fit <- agnes(d, method= "ward")
@@ -284,7 +257,7 @@ agnes_fit$ac
 agnes_groups = cutree(as.hclust(agnes_fit), k = 2)
 ```
 
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 diana_fit = diana(d)
 'Diana'
 diana_fit$dc
@@ -293,7 +266,7 @@ diana_groups = cutree(as.hclust(diana_fit), k = 2)
 # pltree(diana_fit, cex = 0.6, hang = -1, main = "Dendrogram of diana")
 ```
 
-```{r,echo=FALSE}
+```{r,message=F, warning=F, echo=FALSE}
 hclust_fviz = fviz_cluster(list(data = ssctn, cluster = groups),geom = 'point', main = "HClust plot")
 agnes_fviz = fviz_cluster(list(data = ssctn, cluster = agnes_groups),geom = 'point', main = "Agnes plot")
 diana_fviz = fviz_cluster(list(data = ssctn, cluster = diana_groups),geom='point', main = "Diana plot")
@@ -303,11 +276,11 @@ orig_fviz = fviz_cluster(list(data=ssctn, cluster=sct$Cover_Type),geom='point',m
 Obviously, the two clusters are again not resembling in any way the clustering for Cover_Type. However, it appears that there seems to be some natural division into two clusters, which the Silhouette Method detected. The two groups are nearly linearly separable. Conclusively one can say that in the variables chosen, there appears to be no clustering structure related to the Cover_Type. However, given that I excluded the Soil_Type in the beginning, there might be some clustering structure added through the Soil_Type variable in connection to the cover type. 
 We already saw in the Euclidean case, that by including the Wilderness_Area variable, we were able to bring the cluster structure closer to what would be the original cluster. Because of these two findings, I will continue this analysis by including the Soil_Type variables and using kproto.
 
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 multiplot(hclust_fviz,agnes_fviz,diana_fviz,orig_fviz, cols=2)
 ```
 
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 sct = covtype[sample(nrow(covtype), 2000), ]
 sctl = sct
 sct$Cover_Type = NULL
@@ -332,7 +305,7 @@ for (colName in names(sct)) {
 
 As we can see, the clusters found by kproto resemble much more the clustering based on now that we included the Soil_Type. The centroids are close to one another.
 
-```{r,echo=FALSE}
+```{r, message=F, warning=F, echo=FALSE}
 kp_clusters = kproto(sct, k = 6, nstart = 20,iter.max=80)
 kp_fviz = fviz_cluster(list(data = ssctn, cluster = kp_clusters$cluster), geom='point', main = "Kproto plot")
 orig_fviz = fviz_cluster(list(data=ssctn, cluster=sctl$Cover_Type),geom='point',main='Orig Clustering')
@@ -341,13 +314,16 @@ multiplot(kp_fviz,orig_fviz, cols=1)
 
 The following table indicates that the results are not as close as they appear. For example the kproto clustering is assigning the observations that would be part of either (t1) or (t2) across all of its clusters. This is suboptimal as we would expect that there are 2 mayor types and not 4, since the distribution of Cover_Type suggest so.
 
-```{r}
+```{r, message=F, warning=F, echo=FALSE}
 table(kp_clusters$cluster, sctl$Cover_Type)
 ```
 ##Citations
 https://cran.r-project.org/web/packages/ClusterR/vignettes/the_clusterR_package.html
+
 https://archive.ics.uci.edu/ml/datasets/covertype
+
 https://uc-r.github.io/kmeans_clustering
+
 http://uc-r.github.io/hc_clustering
 
 
